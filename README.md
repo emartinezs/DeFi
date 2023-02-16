@@ -23,7 +23,7 @@ Built with:
     -   [prettier-plugin-solidity](https://www.npmjs.com/package/prettier-plugin-solidity)
 -   [dotenv](https://www.npmjs.com/package/dotenv)
 
-# Install
+## Install
 
 Prerequisites:
 
@@ -35,7 +35,7 @@ Install dependencies
 npm install
 ```
 
-# Run
+## Run
 
 Add the mainnet RPC URL in the `.evn` file:
 
