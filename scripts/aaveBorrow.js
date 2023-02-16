@@ -2,26 +2,38 @@ const { getNamedAccounts, ethers } = require("hardhat")
 const { getWeth, AMOUNT } = require("./getWeth")
 
 async function main() {
+    // Convert ETH to WETH
     await getWeth()
+
+    // Get the address of the Lending Pool
     const { deployer } = await getNamedAccounts()
     const lendingPool = await getLendingPool(deployer)
     console.log(`LendingPool address ${lendingPool.address}`)
 
+    // Approve the Lending Pool to transfer the WETH tokens
     const wethTokenAddress = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     await approveErc20(wethTokenAddress, lendingPool.address, AMOUNT, deployer)
+
+    // Deposit WETH into the Lending Pool
     console.log("Depositing...")
     await lendingPool.deposit(wethTokenAddress, AMOUNT, deployer, 0)
     console.log("Deposited!")
 
+    // Calculate the amount of DAI we can borrow
     let { availableBorrowsETH, totalDebtETH } = await getBorrowUserData(lendingPool, deployer)
     const daiPrice = await getDaiPrice()
+    const amountDai = availableBorrowsETH.toString() / daiPrice.toNumber()
+    console.log(`You can borrow ${amountDai} DAI`)
+
+    // Borrow 95% of the total DAI we can borrow
     const ammountDaiToBorrow = availableBorrowsETH.toString() * 0.95 * (1 / daiPrice.toNumber())
-    console.log(`You can borrow ${ammountDaiToBorrow} DAI`)
+    console.log(`You will borrow ${ammountDaiToBorrow} DAI`)
     const amountDaiToBorrowWei = ethers.utils.parseEther(ammountDaiToBorrow.toString())
     const daiTokenAddress = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
     await borrowDai(daiTokenAddress, lendingPool, amountDaiToBorrowWei, deployer)
     await getBorrowUserData(lendingPool, deployer)
 
+    // Repay the amount borrowed
     await repay(amountDaiToBorrowWei, daiTokenAddress, lendingPool, deployer)
     await getBorrowUserData(lendingPool, deployer)
 }
@@ -41,7 +53,7 @@ async function approveErc20(erc20Address, spenderAddress, amountToSpend, account
     const erc20Token = await ethers.getContractAt("IERC20", erc20Address, account)
     const tx = await erc20Token.approve(spenderAddress, amountToSpend)
     await tx.wait(1)
-    console.log("Approved!")
+    console.log("Spender Approved")
 }
 
 async function getBorrowUserData(lendingPool, account) {
@@ -66,7 +78,7 @@ async function getDaiPrice() {
 async function borrowDai(daiAddress, lendingPool, amountDaiToBorrowWei, account) {
     const borrowTx = await lendingPool.borrow(daiAddress, amountDaiToBorrowWei, 1, 0, account)
     await borrowTx.wait(1)
-    console.log("You've borrowed!")
+    console.log("Borrowed!")
 }
 
 async function repay(amount, daiAddress, lendingPool, account) {
